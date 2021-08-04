@@ -1,5 +1,6 @@
 import asyncio
 import os
+discordtoken = os.environ['token']
 import re
 import discord
 from discord.ext import commands
@@ -12,7 +13,6 @@ from discord.utils import get
 from discord import FFmpegPCMAudio
 from discord import TextChannel
 from youtube_dl import YoutubeDL
-discordtoken = os.environ['token']
 intents = discord.Intents.default()
 intents.members = True
 intents.reactions = True
@@ -20,6 +20,8 @@ intents.messages = True
 intents.emojis = True
 client = commands.Bot(command_prefix=".", case_insensitive=True, intents=intents, help_command=None)
 slash = SlashCommand(client, sync_commands=True)
+seconds = 0
+
 
 @client.event
 async def on_ready():
@@ -28,34 +30,47 @@ async def on_ready():
   print("")
   print("Bot logged in as",client.user)
   print('Connected to {} servers'.format(len(client.guilds), len(set(client.get_all_members())), client.shard_count))
-  print("https://discord.com/api/oauth2/authorize?client_id=730093014222897182&permissions=842525783&scope=applications.commands%20bot")
+  print(f"https://discord.com/api/oauth2/authorize?client_id={client.user.id}&permissions=842525783&scope=applications.commands%20bot")
   print("")
   try:
     os.remove("file.txt")
   except:
     print("Error removing file.txt")
   while True:
+    global seconds
     servers = len(client.guilds)
     channels = sum([len(guild.channels) for guild in client.guilds])
     members = sum([int(guild.member_count) for guild in client.guilds])
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f"{servers} servers"))
     await asyncio.sleep(20)
+    seconds += 20
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f"{members} users"))
-    await asyncio.sleep(30)
+    await asyncio.sleep(20)
+    seconds += 20
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f"{channels} channels"))
     await asyncio.sleep(20)
+    seconds += 20
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="for .help"))
-    await asyncio.sleep(40)
+    await asyncio.sleep(20)
+    seconds += 20
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="you"))
     await asyncio.sleep(20)
+    seconds += 20
 
   
 #--------------------------
 
-@slash.slash(name="test")
-async def test(ctx: SlashContext):
-    embed = discord.Embed(title="Embed Test")
-    await ctx.send(embed=embed)
+#ping
+@slash.slash(name="ping", description="Pong!")
+async def ping(ctx: SlashContext):
+    await ctx.send(f"Pong! {client.latency}ms")
+
+#uptime
+@slash.slash(name="uptime", description="Bot's uptime!")
+async def uptime(ctx: SlashContext):
+    global seconds
+    extra = seconds + 20
+    await ctx.send(f"Bot uptime: Between {seconds}s and {extra}s")
 
 #help
 @client.command()
@@ -63,10 +78,17 @@ async def help(ctx,other=None):
   if other == None:
     help = discord.Embed (
         title = 'Bidoof\'s commands',
-        description = '\n **Useful:** \n `.help useful` \n \n **Music:** \n `.help music`\n \n **Fun:**\n `.help fun`\n \n **Moderating:**\n `.help moderating`\n \n **Admin:** \n `.help admin` \n \n **Premium:** \n `.help premium` ',
+        description = '\n **Useful:** \n `.help useful` \n \n **Music:** \n `.help music`\n \n **Fun:**\n `.help fun`\n \n **Moderating:**\n `.help moderating`\n \n **Admin:** \n `.help admin` \n \n **Economy:** \n `.help economy` ',
         colour = discord.Colour.orange()
     )
     await ctx.send(embed=help)
+  elif other == "economy":
+    economy = discord.Embed (
+        title = 'Bidoof\'s economy commands',
+        description = '**Prefix:** `.` \n \n Balance - `bal (user if necessary)` \n Beg for money - `beg` \n Withdraw - `with (all/amount)` \n Deposit - `dep (all/amount)` \n Rob a user - `rob (user)` \n Shop - `shop` \n Buy - `buy (item id)` \n Inventory - `inv`',
+        colour = discord.Colour.orange()
+    )
+    await ctx.send(embed=economy)
   elif other == "music":
     music = discord.Embed (
         title = 'Bidoof\'s music commands',
@@ -98,7 +120,7 @@ async def help(ctx,other=None):
   elif other == "useful":
     useful = discord.Embed (
         title = 'Bidoof\'s useful commands',
-        description = '**Prefix:** `.` \n \n Poll - `poll (question)`',
+        description = '**Prefix:** `.` \n \n Poll - `poll (question)` \n Members in your server - `members`',
         colour = discord.Colour.orange()
     )
     await ctx.send(embed=useful)
@@ -114,7 +136,7 @@ async def help(ctx,other=None):
 
 
 #members
-@client.command()
+@client.command(name="members", description="See how many people are in your server")
 async def members(ctx):
     embedVar = discord.Embed(title=f'There Are {ctx.guild.member_count} Members In This Server', color=0xFF0000)
     if ctx.author.id == 478190340734451714:
@@ -333,28 +355,36 @@ async def warn(ctx, member : discord.Member, *, reason=None):
         warn4Role = await guild.create_role(name="Fourth warning")
       if not warn5Role:
         warn5Role = await guild.create_role(name="5+ warnings")
-      if not warn1Role in member.roles:
-            await member.add_roles(warn1Role, reason=reason)
-      if warn1Role in member.roles:
-            await member.add_roles(warn2Role, reason=reason)
-            await member.remove_roles(warn1Role)
-      if warn2Role in member.roles:
-            await member.add_roles(warn3Role, reason=reason)
-            await member.remove_roles(warn2Role)
-            await member.remove_roles(warn1Role)
-      if warn3Role in member.roles:
-            await member.add_roles(warn4Role, reason=reason)
-            await member.remove_roles(warn3Role)
-            await member.remove_roles(warn1Role)
-            
-      if warn4Role in member.roles:
-            await member.add_roles(warn5Role, reason=reason)
-            await member.remove_roles(warn4Role)
-            
-      if warn5Role in member.roles:
-            await member.remove_roles(warn1Role)
+      while True:
+        if not warn1Role in member.roles:
+              await member.add_roles(warn1Role, reason=reason)
+              break
+        if warn1Role in member.roles:
+              await member.add_roles(warn2Role, reason=reason)
+              await member.remove_roles(warn1Role)
+              break
+        if warn2Role in member.roles:
+              await member.add_roles(warn3Role, reason=reason)
+              await member.remove_roles(warn2Role)
+              await member.remove_roles(warn1Role)
+              break
+        if warn3Role in member.roles:
+              await member.add_roles(warn4Role, reason=reason)
+              await member.remove_roles(warn3Role)
+              await member.remove_roles(warn1Role)
+              break
+              
+        if warn4Role in member.roles:
+              await member.add_roles(warn5Role, reason=reason)
+              await member.remove_roles(warn4Role)
+              break
+              
+        if warn5Role in member.roles:
+              await member.remove_roles(warn1Role)
+              break
     except discord.Forbidden:
-        await ctx.send(f"Forbidden to warn {member}, move my role to the top of the role list!")
+          await ctx.send(f"Forbidden to warn {member}, move my role to the top of the role list!")
+          
 
 #clear database for person
 @client.command()
@@ -473,11 +503,10 @@ async def on_message(message):
                     return
   f = open("file.txt", "a")
   with open("file.txt", "r") as f:
+    data = f. read()
+    tests = data. count(str(message.guild.id))
     if not message.author.bot:
-      searching = re.compile(r'\b({0})\b'.format(idd), flags=re.IGNORECASE).search
-      while True:
-        line = f.readline()
-        if not line:
+        if tests == 0:
           if not mutedRole:
               mutedRole = await guild.create_role(name="Temp Muted")
               print(f"Added Temp Muted role to {name}")
@@ -490,7 +519,7 @@ async def on_message(message):
                 print(f"Replaced Temp Muted role from {name}")
               except:
                 return
-        try:
+          try:
             totalroles=-1
             for role in message.guild.roles:
               totalroles+=1
@@ -498,28 +527,28 @@ async def on_message(message):
             await mutedRole.edit(position=pos)
             for channel in guild.channels:
               await channel.set_permissions(mutedRole, speak=False, send_messages=False)
-            break
-        except:
-            break
+            f = open("file.txt", "a")
+            f.write(idd)
+            f.write("\n")
+            
+          except:
+            f = open("file.txt", "a")
+            f.write(idd)
+            f.write("\n")
+            
       
-      f = open("file.txt", "a")
-      f.write(idd)
-      f.write("\n")
   f = open("bump.txt", "a")
   with open("bump.txt", "r") as f:
-    searching = re.compile(r'\b({0})\b'.format(message.guild.id), flags=re.IGNORECASE).search
-    while True:
-            line = f.readline()
-            if not line:
-              break
-            if searching(line):
-              for server in file:
-                if message.embeds:
-                  if "Check it on DISBOARD:" in message.embeds[0].description: 
-                    await message.add_reaction(emoji='⏱️')
-                    await message.channel.send("Thanks for bumping the server! I will remind you in 2 hours!")
-                    await asyncio.sleep(7200)
-                    await message.channel.send("Remember to bump the server! @here")
+            data = f. read()
+            tests = data. count(str(message.guild.id))
+            if tests != 0:
+                if message.author.bot:
+                  if message.embeds:
+                    if "Check it on DISBOARD:" in message.embeds[0].description: 
+                      await message.add_reaction(emoji='⏱️')
+                      await message.channel.send("Thanks for bumping the server! I will remind you in 2 hours!")
+                      await asyncio.sleep(7200)
+                      await message.channel.send("Remember to bump the server! @here")
   #if "hi" in message.content:
   #  await message.add_reaction('🥝')
   if message.content.startswith('.poll'):
@@ -527,25 +556,16 @@ async def on_message(message):
     await message.add_reaction('👎')
   f = open("premium.txt", "a")
   with open("premium.txt", "r") as f:
-    searching = re.compile(r'\b({0})\b'.format(message.guild.id), flags=re.IGNORECASE).search
-    while True:
             name = str(message.guild)
-            try:
-              line = f.readline()
-            except:
-              break
-            if not searching(line):
-              break
-            if searching(line):
+            data = f. read()
+            tests = data. count(str(message.guild.id))
+            if tests>0:
               f = open("leveling.txt", "a")
               with open("leveling.txt", "r") as f:
                 if not message.author.bot:
-                  searching = re.compile(r'\b({0})\b'.format(message.guild.id), flags=re.IGNORECASE).search
-                  while True:
-                        line = f.readline()
-                        if not line:
-                          break
-                        if searching(line):
+                        data = f. read()
+                        tests = data. count(str(message.guild.id))
+                        if tests>0:
                           clan = str(message.guild.id)
                           author = str(message.author.id)
                           authorname = str(message.author.name)
@@ -590,49 +610,52 @@ async def on_message(message):
 async def level(ctx):
   f = open("premium.txt", "a")
   with open("premium.txt", "r") as f:
-      searching = re.compile(r'\b({0})\b'.format(ctx.guild.id), flags=re.IGNORECASE).search
-      while True:
-            name = str(ctx.guild)
-            try:
-              line = f.readline()
-            except:
-              return
-            if not searching(line):
-              await ctx.channel.send("This is not a premium server! For help about premium, do .help premium")
-              break
-            if searching(line):
-              f = open("leveling.txt", "a")
-              with open("leveling.txt", "r") as f:
-                searching = re.compile(r'\b({0})\b'.format(ctx.guild.id), flags=re.IGNORECASE).search
-                while True:
-                                    line = f.readline()
-                                    if not searching(line):
-                                      await ctx.channel.send(f"Leveling is not enabled on {ctx.guild}")
-                                      break
-                                    if searching(line):
-                                      clan = str(ctx.guild.id)
-                                      author = str(ctx.author.id)
-                                      authorname = str(ctx.author.name)
-                                      word = "level"
-                                      person = authorname + word + clan + author 
-                                      with open(person, 'r') as file :
-                                            filedata = file.read()
-                                      with open(person, 'w') as file:
-                                          file.write(filedata)
-                                          level = str(filedata)
-                                          fullstring = level
-                                          substring = ".0"
-                                          if substring in fullstring:
-                                                          print("Level check - Found!")
-                                                          level = str(filedata)
-                                                          await ctx.channel.send(f"{ctx.author.name}, you are level {level}!")
-                                          else:
-                                                          print("Level check - Not found!")
-                                                          level = float(filedata)
-                                                          await ctx.channel.send(f"{ctx.author.name}, you are level {level}!")
-                                      break
+                                    data = f. read()
+                                    tests = data. count(str(ctx.guild.id))
+                              
+                                    name = str(ctx.guild)
+                                    if tests == 0:
+                                      await ctx.channel.send("This is not a premium server! For help about premium, do .help premium")
+                                      
+                                    if tests > 0:
+                                      f = open("leveling.txt", "a")
+                                      with open("leveling.txt", "r") as f:
+                                        data = f. read()
+                                        tests = data. count(str(ctx.guild.id))
+                                        searching = re.compile(r'\b({0})\b'.format(ctx.guild.id), flags=re.IGNORECASE).search
+                                        line = f.readline()
+                                        if tests == 0:
+                                          await ctx.channel.send(f"Leveling is not enabled on {ctx.guild}")
+                                          
+                                        if tests > 0:
+                                          clan = str(ctx.guild.id)
+                                          author = str(ctx.author.id)
+                                          authorname = str(ctx.author.name)
+                                          word = "level"
+                                          person = authorname + word + clan + author 
+                                          f = open(person, "a")
+                                          with open(person, 'r') as file :
+                                                filedata = file.read()
+                                          with open(person, 'w') as file:
+                                              file.write(filedata)
+                                              level = str(filedata)
+                                              fullstring = level
+                                              substring = ".0"
+                                              if substring in fullstring:
+                                                              print("Level check - Found!")
+                                                              level = str(filedata)
+                                                              await ctx.channel.send(f"{ctx.author.name}, you are level {level}!")
+                                                              
 
- 
+                                              else:
+                                                              print("Level check - Not found!")
+                                                              level = filedata
+                                                              await ctx.channel.send(f"{ctx.author.name}, you are level {level}!")
+                                                          
+                                      
+                                      
+
+#toggle leveling
 @client.command()
 async def leveling(ctx, toggle=None):
   f = open("premium.txt", "a")
@@ -672,6 +695,7 @@ async def leveling(ctx, toggle=None):
 
                   filedata = filedata.replace(id, '')
 
+ 
                   with open('leveling.txt', 'w') as file:
                     file.write(filedata)
                     await ctx.send(f"👍 Disabled leveling on **{name}**!")
@@ -1260,9 +1284,419 @@ async def moverole(ctx, role: discord.Role, pos: int):
     except discord.InvalidArgument:
         await ctx.send("Invalid argument")
 
+#bal
+@client.command()
+async def bal(ctx,member:discord.Member=None):
+  if member == None:
+    author = str(ctx.author.id)
+    authorname = str(ctx.author.name)
+    word = "wallet"
+    word2 = "bank"
+    person = authorname + word + author 
+    guy = authorname + word2 + author
+    f = open(person, "a")
+    with open(person, 'r') as file :
+                    wmoney = file.read()
+                    if wmoney == "":
+                          q = open(person, "a")
+                          q.write("0")
+    with open(person, 'r') as file :
+                    walletmon = file.read()
+    f = open(guy, "a")
+    with open(guy, 'r') as file :
+                    bmoney = file.read()
+                    if bmoney == "":
+                          q = open(guy, "a")
+                          q.write("0")
+    with open(guy, 'r') as file :
+                    bankmon = file.read()
+    try:
+      bank = int(bankmon)
+      wallet = int(walletmon)
+      bal = discord.Embed (
+          title = f'{ctx.author.name}\'s balance',
+          description = f'\n **Wallet:** `{wallet}` moneys\n **Bank:** `{bank}` moneys',
+          colour = discord.Colour.orange()
+      )
+      await ctx.send(embed=bal)
+    except:
+      bal = discord.Embed (
+          title = f'{ctx.author.name}\'s balance',
+          description = f'\n **Wallet:** `0` moneys\n **Bank:** `0` moneys',
+          colour = discord.Colour.orange()
+      )
+      await ctx.send(embed=bal)
+  else:
+    try:
+      author = str(ctx.author.id)
+      authorname = str(ctx.author.name)
+      word = "wallet"
+      word2 = "bank"
+      person = str(member.name) + word + str(member.id)
+      guy = str(member.name) + word2 + str(member.id)
+      f = open(person, "a")
+      with open(person, 'r') as file :
+                      wmoney = file.read()
+                      if wmoney == "":
+                            q = open(person, "a")
+                            q.write("0")
+      with open(person, 'r') as file :
+                      walletmon = file.read()
+      f = open(guy, "a")
+      with open(guy, 'r') as file :
+                      bmoney = file.read()
+                      if bmoney == "":
+                            q = open(guy, "a")
+                            q.write("0")
+      with open(guy, 'r') as file :
+                      bankmon = file.read()
+      try:
+        bank = int(bankmon)
+        wallet = int(walletmon)
+        bal = discord.Embed (
+            title = f'{member.name}\'s balance',
+            description = f'\n **Wallet:** `{wallet}` moneys\n **Bank:** `{bank}` moneys',
+            colour = discord.Colour.orange()
+        )
+        await ctx.send(embed=bal)
+      except:
+        bal = discord.Embed (
+            title = f'{member.name}\'s balance',
+            description = f'\n **Wallet:** `0` moneys\n **Bank:** `0` moneys',
+            colour = discord.Colour.orange()
+        )
+        await ctx.send(embed=bal)
+    except:
+      await ctx.send("An error occured")
 
+#beg
+@client.command()
+async def beg(ctx):
+  author = str(ctx.author.id)
+  money = random.randint(69, 1000)
+  authorname = str(ctx.author.name)
+  word = "wallet"
+  person = authorname + word + author 
+  f = open(person, "a")
+  with open(person, 'r') as file :
+                      walletmon = file.read()
+                      balance = int(walletmon)
+                      balance+=int(money)
+                      bal = str(balance)
+                      await ctx.send("Begging...")
+                      sleeptime = random.randint(1, 4)
+                      await asyncio.sleep(sleeptime)
+                      await ctx.send(f"Someone gave you {money} moneys")
+                      os.remove(person)
+                      q = open(person, "a")
+                      q.write(bal)
 
+#dep
+@client.command()
+async def dep(ctx,monez=None):
+  author = str(ctx.author.id)
+  authorname = str(ctx.author.name)
+  word = "wallet"
+  word2 = "bank"
+  person = authorname + word + author 
+  guy = authorname + word2 + author
+  f = open(person, "a")
+  f = open(guy, "a")
+  try:
+    amount = int(monez)
+  except:
+    testing123=0
+  if monez == None:
+    await ctx.send("Add an amount!")
+    return
+  if monez == "all":
+    with open(person, 'r') as file :
+      walletmon = file.read()
+      try:
+        balance = int(walletmon)
+        os.remove(person)
+        q = open(person, "a")
+        q.write("0")
+        with open(guy, 'r') as fil :
+          bankmon = fil.read()
+          bank = int(bankmon)
+          bank+=balance
+          finalbank = str(bank)
+          os.remove(guy)
+          q = open(guy, "a")
+          q.write(finalbank)
+          await ctx.send(f"Deposited {walletmon} money in the bank!")
+      
+      except:
+        await ctx.send("Nothing to deposit!")
+        return
+      return
+  with open(person, 'r') as file :
+      walletmon = file.read()
+      balance = int(walletmon)
+      if balance >= amount:
+        balance -= amount
+        balancee = str(balance)
+        os.remove(person)
+        q = open(person, "a")
+        q.write(balancee)
+        with open(guy, 'r') as fil :
+          bankmon = fil.read()
+          bank = int(bankmon)
+          bank+=amount
+          finalbank = str(bank)
+          os.remove(guy)
+          q = open(guy, "a")
+          q.write(finalbank)
+          await ctx.send(f"Deposited {amount} money in the bank!")
+      else:
+        await ctx.send("You do not have enough money in your wallet!")
 
+#with
+@client.command(aliases=['with'])
+async def withdraw(ctx,monez=None):
+  author = str(ctx.author.id)
+  authorname = str(ctx.author.name)
+  word = "wallet"
+  word2 = "bank"
+  person = authorname + word + author 
+  guy = authorname + word2 + author
+  f = open(person, "a")
+  f = open(guy, "a")
+  try:
+    amount = int(monez)
+  except:
+    testing123=0
+  if monez == None:
+    await ctx.send("Add an amount!")
+    return
+  if monez == "all":
+    with open(guy, 'r') as file :
+      bankmon = file.read()
+      try:
+        balance = int(bankmon)
+        os.remove(guy)
+        q = open(guy, "a")
+        q.write("0")
+        with open(person, 'r') as fil :
+          walletmon = fil.read()
+          wallet = int(walletmon)
+          wallet+=balance
+          finalwallet = str(wallet)
+          os.remove(person)
+          q = open(person, "a")
+          q.write(finalwallet)
+          await ctx.send(f"Deposited {balance} money into your wallet!")
+      
+      except:
+        await ctx.send("Nothing to deposit!")
+        return
+      return
+  with open(guy, 'r') as file :
+      bankmon = file.read()
+      balance = int(bankmon)
+      if balance >= amount:
+        balance -= amount
+        balancee = str(balance)
+        os.remove(guy)
+        q = open(guy, "a")
+        q.write(balancee)
+        with open(person, 'r') as fil :
+          walletmon = fil.read()
+          wallet = int(walletmon)
+          wallet+=amount
+          finalwallet = str(wallet)
+          os.remove(person)
+          q = open(person, "a")
+          q.write(finalwallet)
+          await ctx.send(f"Withdrew {amount} money from the bank!")
+      else:
+        await ctx.send("You do not have enough money!")
+
+#shop
+@client.command()
+async def shop(ctx):
+  shop = discord.Embed (
+        title = f'Shop',
+        description = f'\n <:toothbrush:871726581935144970> **Toothbrush** - 10 moneys \n *ID* `toothbrush` - Collectable \n \n <:apple:871761847974502461> **Apple** - 10000 moneys \n *ID* `apple` - Collectable \n \n <:gun:871870102243528804> **Gun** - 100000 moneys \n *Get a change to get 25% extra when robbing someone* \n *ID* `gun` - Powerup',
+        colour = discord.Colour.orange()
+    )
+  await ctx.send(embed=shop)
+
+#buy
+@client.command()
+async def buy(ctx, item=None):
+  author = str(ctx.author.id)
+  authorname = str(ctx.author.name)
+  word = "wallet"
+  word2 = "bank"
+  word3= "inv"
+  person = authorname + word + author 
+  guy = authorname + word2 + author
+  f = open(person, "a")
+  f = open(guy, "a")
+  personinv = authorname + word3 + author 
+  if item=="toothbrush":
+    try:
+      amount = 10
+      with open(person, 'r') as file :
+        walletmon = file.read()
+        balance = int(walletmon)
+        if balance >= amount:
+          balance -= amount
+          balancee = str(balance)
+          os.remove(person)
+          q = open(person, "a")
+          q.write(balancee)
+          l = open(personinv, "a")
+          with open(personinv, 'r') as file :
+            inv = file.read()
+            try:
+              os.remove(personinv)
+            except:
+              one=1
+            q = open(personinv, "a")
+            q.write(f"{inv} test")
+            await ctx.send("Bought 1 toothbrush!")
+        else:
+            await ctx.send("Not enough money in wallet!")
+    except:
+      await ctx.send("Not enough money in wallet!")
+  elif item=="apple":
+      try:
+        amount = 10000
+        with open(person, 'r') as file :
+          walletmon = file.read()
+          balance = int(walletmon)
+          if balance >= amount:
+            balance -= amount
+            balancee = str(balance)
+            os.remove(person)
+            q = open(person, "a")
+            q.write(balancee)
+            l = open(personinv, "a")
+            with open(personinv, 'r') as file :
+              inv = file.read()
+              try:
+                os.remove(personinv)
+              except:
+                one=1
+              q = open(personinv, "a")
+              q.write(f"{inv} apple")
+              await ctx.send("Bought 1 apple!")
+          else:
+              await ctx.send("Not enough money in wallet!")
+      except:
+        await ctx.send("Not enough money in wallet!")
+  elif item=="gun":
+    try:
+        amount = 100000
+        with open(person, 'r') as file :
+          walletmon = file.read()
+          balance = int(walletmon)
+          if balance >= amount:
+            balance -= amount
+            balancee = str(balance)
+            os.remove(person)
+            q = open(person, "a")
+            q.write(balancee)
+            l = open(personinv, "a")
+            with open(personinv, 'r') as file :
+              inv = file.read()
+              try:
+                os.remove(personinv)
+              except:
+                one=1
+              q = open(personinv, "a")
+              q.write(f"{inv} gun")
+              await ctx.send("Bought 1 gun!")
+          else:
+              await ctx.send("Not enough money in wallet!")
+    except:
+        await ctx.send("An error occured")
+
+#rob
+@client.command()
+async def rob(ctx, member: discord.Member):
+  author = str(ctx.author.id)
+  authorname = str(ctx.author.name)
+  word = "wallet"
+  word2 = "bank"
+  word3= "inv"
+  person = authorname + word + author 
+  guy = authorname + word2 + author
+  personinv = authorname + word3 + author 
+  f = open(person, "a")
+  f = open(guy, "a")
+  f = open(personinv, "a")
+  members = f"{member.name}{word}{member.id}"
+  with open(members, 'r') as file :
+                  walletmon = file.read()
+                  try:
+                    balance = int(walletmon) 
+                    f = open(person, "a")
+                    f = open(guy, "a")
+                    f = open(personinv, "a")
+                    with open(personinv, "r") as file:
+                        data = file. read()
+                        tests = data. count("gun")
+                        if tests == 1:
+                          money = random.randint(1, balance/3)
+                        elif tests == 2:
+                          money = random.randint(1, balance/2)
+                        elif tests == 3:
+                          money = random.randint(1, balance)
+                        else:
+                          money = random.randint(1, balance/4)
+                    balance-=int(money)
+                    bal = str(balance)
+                    await ctx.send("Robbing...")
+                    sleeptime = random.randint(1, 4)
+                    await asyncio.sleep(sleeptime)
+                    os.remove(members)
+                    q = open(members, "a")
+                    q.write(bal)
+                    with open(person, 'r') as file :
+                      walletmon = file.read()
+                      mybal = int(walletmon)
+                      mybal+=int(money)
+                      nowbal = str(mybal)
+                      os.remove(person)
+                      q = open(person, "a")
+                      q.write(nowbal)
+                    await ctx.send(f"You robbed {money} moneys from {member.name}")
+                  except:
+                    await ctx.send(f"{member.name} has 0 moneys in their wallet!")
+
+#inv
+@client.command()
+async def inv(ctx):
+  author = str(ctx.author.id)
+  authorname = str(ctx.author.name)
+  word = "wallet"
+  word2 = "bank"
+  word3= "inv"
+  person = authorname + word + author 
+  guy = authorname + word2 + author
+  personinv = authorname + word3 + author  
+  f = open(person, "a")
+  f = open(guy, "a")
+  f = open(personinv, "a")
+  with open(personinv, "r") as file:
+      data = file. read()
+      tests = data. count("test")
+      apples = data. count("apple")
+      guns = data. count("gun") 
+      inv = discord.Embed (
+          title = f'{ctx.author.name}\'s inventory', colour = discord.Colour.orange()
+      )
+      if tests != 0:
+        inv.add_field(name=f"\n <:toothbrush:871726581935144970> Toothbrush - {tests}", value="*ID* `toothbrush`", inline=False)
+      if apples != 0:
+        inv.add_field(name=f"\n <:apple:871761847974502461> **Apple** - {apples}", value="*ID* `apple`", inline=False)
+      if guns != 0:
+        inv.add_field(name=f"\n <:gun:871870102243528804> **Gun** - {guns}", value="*Get a chance to get 25% extra when robbing someone* \n *ID* `gun`", inline=False)
+      await ctx.send(embed=inv)
 
 keep_alive()
 
