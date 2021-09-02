@@ -5,9 +5,9 @@ discordtoken = os.environ['token']
 class Oauth:
     client_id = "730093014222897182"
     client_secret = discordtoken
-    redirect_uri = "https://Python-Bot.mrnoodle1.repl.co/login"
+    redirect_uri = "https://broken.mrnoodle1.repl.co/login"
     scope = "identify%20email%20guilds"
-    discord_login_url = "https://discord.com/api/oauth2/authorize?client_id=730093014222897182&redirect_uri=https%3A%2F%2Fpython-bot.mrnoodle1.repl.co%2Flogin&response_type=code&scope=identify%20email%20guilds"
+    discord_login_url = "https://discord.com/api/oauth2/authorize?client_id=730093014222897182&redirect_uri=https%3A%2F%2Fbroken.mrnoodle1.repl.co%2Flogin&response_type=code&scope=identify%20guilds%20email"
     discord_token_url = "https://discord.com/api/oauth2/token"
     discord_api_url = "https://discord.com/api"
  
@@ -17,7 +17,7 @@ class Oauth:
             "client_id": Oauth.client_id,
             "client_secret": Oauth.client_secret,
             "grant_type": "authorization_code",
-            "code": code,
+            "code": f"{code}",
             "redirect_uri": Oauth.redirect_uri,
             "scope": Oauth.scope
         }

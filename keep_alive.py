@@ -1,16 +1,16 @@
-from flask import Flask, render_template
+from flask import Flask, render_template,request, session,redirect
 from threading import Thread
 from oauth import Oauth
+from routes.discord_oauth import DiscordOauth
 
 app = Flask(__name__)
+app.config["SECRET_KEY"] = "test123"
 
 @app.route('/')
 def home():
-    return render_template("index.html",discord_url=Oauth.discord_login_url)
+    return "Alive and well"
 
-@app.route("/login")
-def login():
-	return "yes"
+
 
 def run():
   app.run(host='0.0.0.0',port=8080)
