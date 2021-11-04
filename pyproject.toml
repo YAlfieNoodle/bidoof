@@ -17,6 +17,8 @@ discord-ext-slash = "^0.7.0"
 discord-py-slash-command = "^2.3.2"
 Flask = "^2.0.1"
 lab-notebook = "^3.3.3"
+nextcord = "^2.0.0-alpha.2"
+selenium = "^3.141.0"
 
 [tool.poetry.dev-dependencies]
 
